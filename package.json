@@ -1,0 +1,35 @@
+{
+  "name": "apni-galli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apni Galli: a small illustrated street for a small business. Bookings, orders, enquiries and a newsletter, with a front desk for the owner.",
+  "author": "Rutvi Rupani",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "next dev -p 3690",
+    "build": "next build",
+    "start": "next start -p 3690",
+    "typecheck": "tsc --noEmit"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["sharp", "@tailwindcss/oxide", "unrs-resolver"]
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.16",
+    "@neondatabase/serverless": "1.2.0",
+    "next": "16.4.6",
+    "qrcode": "1.5.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/node": "22.20.5",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3"
+  }
+}
