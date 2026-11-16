@@ -132,7 +132,7 @@ export default async function ChitStatus({ params, searchParams }: { params: Pro
             <a className="btn" href={`/w/${x.handle}/counter?reschedule=${token}`}>
               Reschedule
             </a>
-            <form action={cancel}>
+            <form action={cancel} id="cancel">
               <button className="btn">Cancel booking</button>
             </form>
           </div>

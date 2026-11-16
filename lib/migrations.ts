@@ -435,4 +435,20 @@ do $$ begin
 end $$;
 `,
   },
+  {
+    name: "0004_push",
+    sql: `
+create table if not exists push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references owners(id) on delete cascade,
+  lane_id uuid not null references lanes(id) on delete cascade,
+  endpoint text unique not null check (endpoint like 'https://%'),
+  keys jsonb not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists push_subscriptions_lane on push_subscriptions (lane_id);
+grant select, insert, update, delete on push_subscriptions to galli_app;
+${OWNED("push_subscriptions")}
+`,
+  },
 ];

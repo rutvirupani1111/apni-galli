@@ -39,6 +39,9 @@ function Cover({ lane, s, t, live }: { lane: PublicLane; s: AnyScene; t: number;
           <div className="flex-1 p-3" style={{ background: "var(--lane-a)", color: "var(--on-lane-a)" }}>
             <p className="mast text-[2.1rem] leading-[0.9]">{m.name.split(" ")[0]}</p>
             <p className="mast text-[2.1rem] leading-[0.9] opacity-80">{m.name.split(" ").slice(1).join(" ")}</p>
+            <div className="ml-auto mt-2 h-[52%] w-[58%] rotate-2 border-2 border-[#1e1b18]" style={{ boxShadow: "3px 4px 0 rgba(0,0,0,.25)" }}>
+              <Door scene={s} label={m.hi} />
+            </div>
           </div>
           <div className="bg-[var(--paper)] p-3">
             <p className="mono text-xs uppercase">{lane.doc.name}</p>
@@ -67,6 +70,9 @@ function Cover({ lane, s, t, live }: { lane: PublicLane; s: AnyScene; t: number;
       return (
         <div className={base} style={{ ...shadow, background: "color-mix(in srgb, var(--lane-c) 35%, var(--chalk))" }}>
           <p className="mast p-3 text-3xl leading-none">{m.name}</p>
+          <div className="mx-3 h-[48%] w-[62%] -rotate-2 border-2 border-[#1e1b18]">
+            <Door scene={s} label={m.hi} />
+          </div>
           <div className="absolute bottom-4 right-3 grid size-28 rotate-[-10deg] place-items-center rounded-full border-2 border-[#1e1b18] p-2 text-center" style={{ background: "var(--haldi)" }}>
             <span className="sign text-base leading-tight">{live}</span>
           </div>
@@ -78,12 +84,15 @@ function Cover({ lane, s, t, live }: { lane: PublicLane; s: AnyScene; t: number;
         <div className={base} style={{ ...shadow, background: "#fff4e0" }}>
           <div className="flex flex-wrap gap-1 p-3">
             {[...m.name.split(" ")[0]].map((ch, i) => (
-              <span key={i} className="mast grid h-10 w-8 place-items-center text-2xl" style={{ background: ["var(--lane-a)", "var(--haldi)", "#1e1b18", "var(--lane-b)"][i % 4], color: i % 4 === 2 ? "#fff4e0" : "#1e1b18", transform: `rotate(${(i % 3) * 4 - 4}deg)` }}>
+              <span key={i} className="mast grid h-8 w-6 place-items-center text-xl sm:h-10 sm:w-8 sm:text-2xl" style={{ background: ["var(--lane-a)", "var(--haldi)", "#1e1b18", "var(--lane-b)"][i % 4], color: i % 4 === 2 ? "#fff4e0" : "#1e1b18", transform: `rotate(${(i % 3) * 4 - 4}deg)` }}>
                 {ch}
               </span>
             ))}
           </div>
           <p className="px-3 text-sm">{m.verb}.</p>
+          <div className="mx-auto mt-1 hidden h-[38%] w-[46%] rotate-3 sm:block border-2 border-dashed border-[#1e1b18] bg-[var(--chalk)] p-1">
+            <Door scene={s} label={m.hi} />
+          </div>
           <p className="mono mt-auto bg-[#1e1b18] p-2 text-xs text-[var(--haldi)]">{live}</p>
         </div>
       );
@@ -96,10 +105,13 @@ function Cover({ lane, s, t, live }: { lane: PublicLane; s: AnyScene; t: number;
             <span>{m.name}</span>
             <span>issue {b.n}</span>
           </p>
-          <p className="mast px-3 text-[5.5rem] leading-none" style={{ color: "var(--lane-a)" }}>
+          <p className="mast px-3 text-[4rem] leading-none sm:text-[5.5rem]" style={{ color: "var(--lane-a)" }}>
             {b.n}
           </p>
           <p className="px-3 text-sm">{b.label}</p>
+          <div className="absolute bottom-10 right-3 hidden h-[40%] w-[38%] border-2 sm:block border-[#1e1b18]">
+            <Door scene={s} label={m.hi} />
+          </div>
           <p className="sign mt-auto px-3 pb-3 text-lg">{live}</p>
         </div>
       );

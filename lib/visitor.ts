@@ -156,7 +156,7 @@ export async function confirmHold(
           to: o.contact.trim(),
           kind: "booking",
           subject: `${status === "confirmed" ? "Slot pakka" : "Slot request sent"}: ${svc.name.en}, ${when}`,
-          text: `${doc.name}\n${svc.name.en}\n${when} (${lane.tz})\nStatus: ${status === "confirmed" ? "Pakka (confirmed)" : "Pending, the owner will confirm"}\n\nSee, reschedule or cancel: ${url}`,
+          text: `${doc.name}\n${svc.name.en}\n${when} (${lane.tz})\nStatus: ${status === "confirmed" ? "Pakka (confirmed)" : "Pending, the owner will confirm"}\n\nSee it: ${url}\nReschedule: ${baseUrl()}/b/${publicToken}/reschedule\nCancel: ${baseUrl()}/b/${publicToken}/cancel`,
           ics,
         });
       }

@@ -2,6 +2,7 @@
 // outbox_emails (the dev transport) and the owner can read it in Studio > Daak. Never claims delivery.
 import type { Q } from "./db";
 import { sha256 } from "./crypto";
+import { pushLane } from "./push";
 
 export type Mail = {
   laneId?: string | null;
@@ -45,6 +46,8 @@ export async function queueMail(q: Q, m: Mail) {
      values ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [m.laneId ?? null, m.ownerId ?? null, sha256(m.to.toLowerCase()), m.to, m.kind, m.subject, JSON.stringify({ text: m.text, ics: m.ics ? true : false }), delivered],
   );
+  // anything new for the owner also wakes the Galla on every device they turned the ghanti on for
+  if (m.kind.startsWith('owner-') && m.laneId) await pushLane(q, m.laneId).catch(() => 0);
   return delivered;
 }
 

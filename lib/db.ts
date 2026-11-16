@@ -102,6 +102,11 @@ async function open(): Promise<Raw> {
 }
 
 async function migrate(raw: Raw) {
+  // A cold start on a database that is already up to date costs one round trip, not one per migration.
+  const applied = await raw
+    .tx((q) => q.query<{ name: string }>("select name from _migrations"))
+    .catch(() => null);
+  if (applied && MIGRATIONS.every((m) => applied.some((a) => a.name === m.name))) return;
   await raw.exec(`create table if not exists _migrations (name text primary key, applied_at timestamptz not null default now())`);
   for (const m of MIGRATIONS) {
     await raw.tx(async (q) => {

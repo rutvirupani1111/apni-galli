@@ -179,7 +179,7 @@ export function ChitForm({ handle, scene, fields, prefill, allowFile, title, com
                 <button type="button" className="btn" aria-label={`${f.label} kam karo`} onClick={() => setVals({ ...vals, [f.key]: Math.max(0, Number(vals[f.key] ?? 0) - 1) })}>
                   −
                 </button>
-                <input id={id} inputMode="numeric" className="field w-20 text-center mono" value={String(vals[f.key] ?? 0)} onChange={(e) => setVals({ ...vals, [f.key]: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
+                <input id={id} inputMode="numeric" className="field text-center mono" style={{ width: "5.5rem", flex: "0 0 auto" }} value={String(vals[f.key] ?? 0)} onChange={(e) => setVals({ ...vals, [f.key]: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
                 <button type="button" className="btn" aria-label={`${f.label} badhao`} onClick={() => setVals({ ...vals, [f.key]: Math.min(999, Number(vals[f.key] ?? 0) + 1) })}>
                   +
                 </button>

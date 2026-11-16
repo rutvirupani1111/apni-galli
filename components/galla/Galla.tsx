@@ -470,6 +470,7 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
           <button type="button" className="btn justify-start" onClick={() => setHelp(true)}>
             Shortcuts ( ? )
           </button>
+          {!demo && <PushToggle laneId={desk} />}
           {(offline || pending.length > 0) && (
             <p className="flex items-center gap-2 text-xs" role="status">
               <span className="inline-block size-3 rounded-full bg-[var(--haldi)] ring-2 ring-[#1e1b18]" aria-hidden="true" />
@@ -838,5 +839,63 @@ function Detail({ it, desk, reply, setReply, replyRef, onAct, sendReply }: { it:
         </>
       )}
     </article>
+  );
+}
+
+/** The ghanti: Web Push wakes this Galla on this device when a chit, booking or order lands. */
+function PushToggle({ laneId }: { laneId: string }) {
+  const [state, setState] = useState<"unknown" | "off" | "on" | "busy" | "blocked" | "unsupported" | "unset">("unknown");
+  const [key, setKey] = useState<string | null>(null);
+  const scope = `/studio/${laneId}/galla/`;
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      setState("unsupported");
+      return;
+    }
+    fetch("/api/push/subscribe")
+      .then((r) => r.json())
+      .then(async (j: { key: string | null }) => {
+        if (!j.key) return setState("unset");
+        setKey(j.key);
+        if (Notification.permission === "denied") return setState("blocked");
+        const reg = await navigator.serviceWorker.getRegistration(scope);
+        const sub = await reg?.pushManager.getSubscription();
+        setState(sub ? "on" : "off");
+      })
+      .catch(() => setState("unset"));
+  }, [scope]);
+  if (state === "unknown" || state === "unset") return null;
+  const toKey = (k: string) => {
+    const b = atob(k.replace(/-/g, "+").replace(/_/g, "/") + "==".slice(0, (4 - (k.length % 4)) % 4));
+    return Uint8Array.from(b, (c) => c.charCodeAt(0));
+  };
+  async function toggle() {
+    if (!key) return;
+    setState("busy");
+    try {
+      const reg = await navigator.serviceWorker.register("/galla-sw.js", { scope });
+      await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        await fetch("/api/push/subscribe", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ laneId, endpoint: existing.endpoint }) });
+        await existing.unsubscribe();
+        setState("off");
+        return;
+      }
+      if ((await Notification.requestPermission()) !== "granted") return setState("blocked");
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(key) });
+      const j = sub.toJSON();
+      const r = await fetch("/api/push/subscribe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ laneId, endpoint: j.endpoint, keys: j.keys }) });
+      setState(r.ok ? "on" : "off");
+    } catch {
+      setState("off");
+    }
+  }
+  if (state === "unsupported") return <p className="text-xs text-[var(--muted)]">Is browser mein phone ghanti nahi chalti. Galla har 15 second mein khud dekhta hai.</p>;
+  if (state === "blocked") return <p className="text-xs text-[var(--muted)]">Notifications band hain. Browser settings mein is site ko allow karo.</p>;
+  return (
+    <button type="button" className="btn justify-start" aria-pressed={state === "on"} disabled={state === "busy"} onClick={toggle}>
+      {state === "on" ? "Ghanti on: is phone pe" : state === "busy" ? "Ruko..." : "Is phone pe ghanti bajao"}
+    </button>
   );
 }
