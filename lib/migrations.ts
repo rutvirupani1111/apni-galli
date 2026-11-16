@@ -420,4 +420,19 @@ create policy outbox_emails_owner_insert on outbox_emails for insert
   with check (owner_id = nullif(current_setting('app.owner_id', true), '')::uuid);
 `,
   },
+  {
+    name: "0003_set_role",
+    sql: `
+-- Postgres 16+ gives a CREATEROLE creator ADMIN on the new role but not SET, so SET LOCAL ROLE
+-- galli_app is refused on Neon. Grant SET explicitly (a superuser, as in PGlite, needs nothing).
+do $$ begin
+  if not exists (
+    select 1 from pg_auth_members m join pg_roles r on r.oid = m.roleid join pg_roles u on u.oid = m.member
+    where r.rolname = 'galli_app' and u.rolname = current_user and m.set_option
+  ) and not (select rolsuper from pg_roles where rolname = current_user) then
+    execute format('grant galli_app to %I with inherit false, set true', current_user);
+  end if;
+end $$;
+`,
+  },
 ];
