@@ -7,7 +7,7 @@ import { Facade } from "@/components/art/facades";
 import { CoverMotif, KitDefs } from "@/components/art/kit";
 import { dna, DNA_KEYS, DNA_LABELS, newSeed, SCENES, type DnaKey, type SceneSlug } from "@/lib/dna";
 import { triadVars } from "@/lib/palette";
-import { SCENE_META, type LaneDoc } from "@/lib/doc";
+import { SCENE_META, livePlaceholders, type LaneDoc } from "@/lib/doc";
 
 type Save = "saved" | "saving" | "offline" | "conflict";
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -493,7 +493,7 @@ export function Editor({ laneId, handle, initial, version: v0, published }: { la
           )}
         </p>
       )}
-      {doc.placeholders.length > 0 && <p className="mono mb-3 text-xs text-[var(--sindoor)]">{doc.placeholders.length} starter text baaki (dashed outline). Publish se pehle badlo.</p>}
+      {livePlaceholders(doc).length > 0 && <p className="mono mb-3 text-xs text-[var(--sindoor)]">{livePlaceholders(doc).length} starter text baaki (dashed outline). Publish se pehle badlo.</p>}
       {!published && <p className="mono mb-3 text-xs">Abhi draft hai. Publish karte hi /w/{handle} live hoga.</p>}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_260px]">

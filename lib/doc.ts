@@ -93,3 +93,13 @@ export const SCENE_META: Record<"gate" | SceneSlug, { name: string; hi: string; 
   loft: { name: "Workshop Loft", hi: "कारखाना", verb: "Kahani padho" },
   rooftop: { name: "Rooftop", hi: "छत", verb: "Milne aao" },
 };
+
+// Starter text only blocks publish on buildings the lane actually has. A tutor who drops the
+// Postbox should not be stopped by the Postbox starter pitch they can no longer see.
+const SCENE_KEYS = new Set(["window", "counter", "menu", "postbox", "notice", "loft", "rooftop"]);
+export function livePlaceholders(doc: Pick<LaneDoc, "placeholders" | "scenes">): string[] {
+  return doc.placeholders.filter((p) => {
+    const head = p.split(".")[0];
+    return !SCENE_KEYS.has(head) || (doc.scenes as string[]).includes(head);
+  });
+}

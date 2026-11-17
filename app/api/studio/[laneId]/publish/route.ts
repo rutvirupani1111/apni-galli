@@ -2,7 +2,7 @@ import { z } from "zod";
 import { body, json, route } from "@/lib/http";
 import { ownLane } from "@/lib/auth";
 import { withOwner, withSystem } from "@/lib/db";
-import { diffSummary, type LaneDoc } from "@/lib/doc";
+import { diffSummary, livePlaceholders, type LaneDoc } from "@/lib/doc";
 import { revalidateLane, safeUrl } from "@/lib/lane";
 import { LaneDocSchema } from "@/lib/docschema";
 import { HttpError } from "@/lib/visitor";
@@ -22,7 +22,7 @@ export const GET = route(async (_req: Request, { params }: { params: Promise<{ l
   if (!own) return json({ error: "Login karo" }, 401);
   const { lane, prev } = await state(own.owner.id, laneId);
   const versions = await withOwner(own.owner.id, (q) => q.query("select id, diff_summary, published_at from lane_versions where lane_id = $1 order by published_at desc limit 20", [laneId]));
-  return json({ summary: diffSummary(prev ?? null, lane.draft), placeholders: lane.draft.placeholders, versions });
+  return json({ summary: diffSummary(prev ?? null, lane.draft), placeholders: livePlaceholders(lane.draft), versions });
 });
 
 export const POST = route(async (req: Request, { params }: { params: Promise<{ laneId: string }> }) => {
@@ -42,7 +42,8 @@ export const POST = route(async (req: Request, { params }: { params: Promise<{ l
   const { lane, prev } = await state(own.owner.id, laneId);
   const parsed = LaneDocSchema.safeParse(lane.draft);
   if (!parsed.success) throw new HttpError(400, "invalid", parsed.error.issues[0]?.message ?? "Draft mein gadbad");
-  if (lane.draft.placeholders.length) throw new HttpError(400, "placeholders", `${lane.draft.placeholders.length} jagah abhi bhi starter text hai (dashed outline). Pehle unhe badlo.`, { placeholders: lane.draft.placeholders });
+  const left = livePlaceholders(lane.draft);
+  if (left.length) throw new HttpError(400, "placeholders", `${left.length} jagah abhi bhi starter text hai (dashed outline). Pehle unhe badlo.`, { placeholders: left });
   // link check on publish: only https, http, mailto, tel, upi and wa.me
   const bad = await withOwner(own.owner.id, (q) => q.query<{ url: string }>("select url from notes where lane_id = $1", [laneId]));
   const badUrl = bad.find((n) => !safeUrl(n.url));
