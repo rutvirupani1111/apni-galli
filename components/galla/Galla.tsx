@@ -57,6 +57,12 @@ function nextStatus(it: Item, kind: string, payload?: Record<string, string>): s
 }
 
 const TYPE_LABEL = { chit: "Chit", booking: "Booking", subscriber: "Subscriber" };
+// chit field keys from the kit schemas, in the words the owner reads them
+const FIELD_NAMES: Record<string, string> = {
+  name: "Naam", contact: "WhatsApp ya email", event_date: "Date", hands: "Kitne haath", venue: "Venue", style: "Style",
+  budget: "Budget", deadline: "Deadline", count: "Kitne log", date: "Kab chahiye", kind: "Kaisa shoot", level: "Class",
+  msg: "Message", piece: "Piece",
+};
 const PRESETS = ["Us din full hai", "Yeh hum nahi banate", "Address bahar hai"];
 
 function title(it: Item) {
@@ -730,7 +736,7 @@ function Detail({ it, desk, reply, setReply, replyRef, onAct, sendReply }: { it:
           <dl className="mt-3 space-y-1">
             {Object.entries(d.fields ?? {}).map(([k, v]) => (
               <div key={k} className="flex gap-2">
-                <dt className="mono shrink-0 text-xs uppercase text-[#4a4038]">{k}</dt>
+                <dt className="mono shrink-0 text-xs uppercase text-[#4a4038]">{FIELD_NAMES[k] ?? k.replace(/_/g, " ")}</dt>
                 <dd className="hand break-words">{String(v)}</dd>
               </div>
             ))}
