@@ -3,6 +3,8 @@
 // IndexedDB outbox with an op id, shows a 5-second undo, and flushes to the server in a batch when the undo
 // window closes. The server applies each op id once. The Hisaab counts come from the same query as the list.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { EmptyDesk } from "./EmptyDesk";
 
 type Item = { type: "chit" | "booking" | "subscriber"; id: string; lane_id: string; status: string; at: string; updated_at: string; data: Record<string, any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Hisaab = { bookings_today: number; unanswered: number; to_prepare: number; paid_today: number };
@@ -92,7 +94,7 @@ const statusTone: Record<string, string> = {
   unsubscribed: "var(--tin)",
 };
 
-export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: string; name: string; demo?: boolean; savedViews?: { id: string; name: string; filter: Record<string, string> }[] }) {
+export function Galla({ desk, name, demo, handle, savedViews: initialViews }: { desk: string; name: string; demo?: boolean; handle?: string | null; savedViews?: { id: string; name: string; filter: Record<string, string> }[] }) {
   const [items, setItems] = useState<Item[] | null>(null);
   const [hisaab, setHisaab] = useState<Hisaab | null>(null);
   const [filter, setFilter] = useState<{ type: string; status: string; q: string; day: string }>({ type: "", status: "open", q: "", day: "" });
@@ -111,6 +113,7 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
   const etag = useRef<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const replyRef = useRef<HTMLTextAreaElement>(null);
+  const detailRef = useRef<HTMLElement>(null);
   const gPressed = useRef(0);
   const flushTimer = useRef<number | undefined>(undefined);
   const pendingRef = useRef<Op[]>([]);
@@ -262,11 +265,33 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
 
   const open = useCallback(
     (it: Item) => {
-      setOpenId(it.id);
-      setReply("");
+      // shared element: the row's chit flies into the detail pane (View Transitions API where the browser has it)
+      const calm = document.documentElement.dataset.calm === "1" || matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const rowChit = document.querySelector<HTMLElement>(`[data-id="${it.id}"] .chit`);
+      const det = detailRef.current;
+      const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } };
+      if (doc.startViewTransition && rowChit && det && !calm && it.id !== openId) {
+        det.style.viewTransitionName = "";
+        rowChit.style.viewTransitionName = "chit-open";
+        const vt = doc.startViewTransition(() => {
+          rowChit.style.viewTransitionName = "";
+          flushSync(() => {
+            setOpenId(it.id);
+            setReply("");
+          });
+          det.style.viewTransitionName = "chit-open";
+        });
+        vt.finished.finally(() => {
+          det.style.viewTransitionName = "";
+        });
+      } else {
+        setOpenId(it.id);
+        setReply("");
+      }
+      if (window.innerWidth < 1024) window.setTimeout(() => det?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" }), 60);
       if (it.type === "chit" && it.status === "new") act(it, "read", undefined, { quiet: true, immediate: true });
     },
-    [act],
+    [act, openId],
   );
 
   const primary = (it: Item) => {
@@ -314,8 +339,14 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
         case "r":
           if (it?.type === "chit") {
             e.preventDefault();
-            open(it);
-            window.setTimeout(() => replyRef.current?.focus(), 30);
+            // focus now if the reply box is already on screen, so the first typed letter is never read as a shortcut
+            if (openId === it.id && replyRef.current) replyRef.current.focus();
+            else {
+              open(it);
+              const tryFocus = () => document.activeElement !== replyRef.current && replyRef.current?.focus();
+              window.setTimeout(tryFocus, 30);
+              window.setTimeout(tryFocus, 380);
+            }
           }
           return;
         case "b":
@@ -365,7 +396,7 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [list, cur, act, open, undo, selected]);
+  }, [list, cur, act, open, undo, selected, openId]);
 
   useEffect(() => {
     document.querySelector(`[data-row="${cur}"]`)?.scrollIntoView({ block: "nearest" });
@@ -418,44 +449,65 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[200px_minmax(0,1fr)_minmax(0,1.1fr)]">
         {/* filter rail */}
-        <aside className="flex flex-col gap-3" aria-label="Filters">
-          <label className="mono text-xs uppercase" htmlFor="g-search">
-            Search ( / )
-          </label>
-          <input id="g-search" ref={searchRef} className="input" placeholder="naam, phone, chit, item" value={filter.q} onChange={(e) => setFilter({ ...filter, q: e.target.value })} />
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto lg:flex-wrap" data-noswipe>
-            {[
-              ["", "Sab"],
-              ["chit", "Chits"],
-              ["booking", "Bookings"],
-              ["subscriber", "Subscribers"],
-            ].map(([v, l]) => (
-              <button key={v} type="button" className="btn shrink-0" aria-pressed={filter.type === v} onClick={() => setFilter({ ...filter, type: v })}>
-                {l}
-              </button>
-            ))}
+        <aside className="rail flex flex-col gap-3 self-start" aria-label="Filters">
+          <div>
+            <label className="rail-h flex items-center justify-between" htmlFor="g-search">
+              <span>Dhoondo</span>
+              <kbd>/</kbd>
+            </label>
+            <input id="g-search" ref={searchRef} className="input" placeholder="naam, phone, chit, item" value={filter.q} onChange={(e) => setFilter({ ...filter, q: e.target.value })} />
           </div>
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto lg:flex-wrap" data-noswipe>
-            {[
-              ["open", "Khule"],
-              ["", "Sab status"],
-              ["new", "Naye"],
-              ["pending", "Pending"],
-              ["paid", "Paid"],
-              ["archived", "Archive"],
-            ].map(([v, l]) => (
-              <button key={v + l} type="button" className="btn shrink-0" aria-pressed={filter.status === v} onClick={() => setFilter({ ...filter, status: v })}>
-                {l}
-              </button>
-            ))}
+          <div>
+            <p className="rail-h">Kya</p>
+            <div className="tabs" role="group" aria-label="Type">
+              {[
+                ["", "Sab"],
+                ["chit", "Chits"],
+                ["booking", "Bookings"],
+                ["subscriber", "Subs"],
+              ].map(([v, l]) => (
+                <button key={v} type="button" className="tab" aria-pressed={filter.type === v} onClick={() => setFilter({ ...filter, type: v })}>
+                  {l}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-1.5">
-            <button type="button" className="btn" aria-pressed={filter.day === "today"} onClick={() => setFilter({ ...filter, day: filter.day === "today" ? "" : "today" })}>
-              Aaj (G T)
-            </button>
-            <button type="button" className="btn" aria-pressed={filter.day === "week"} onClick={() => setFilter({ ...filter, day: filter.day === "week" ? "" : "week" })}>
-              7 din
-            </button>
+          <div>
+            <p className="rail-h">Haal</p>
+            <div className="tabs" role="group" aria-label="Status">
+              {[
+                ["open", "Khule"],
+                ["new", "Naye"],
+                ["pending", "Pending"],
+                ["paid", "Paid"],
+                ["archived", "Archive"],
+                ["", "Sab"],
+              ].map(([v, l]) => (
+                <button key={v + l} type="button" className="tab" aria-pressed={filter.status === v} onClick={() => setFilter({ ...filter, status: v })}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="rail-h flex items-center justify-between">
+              <span>Kab</span>
+              <span className="flex gap-1">
+                <kbd>G</kbd>
+                <kbd>T</kbd>
+              </span>
+            </p>
+            <div className="tabs" role="group" aria-label="Din">
+              <button type="button" className="tab" aria-pressed={filter.day === ""} onClick={() => setFilter({ ...filter, day: "" })}>
+                Sab
+              </button>
+              <button type="button" className="tab" aria-pressed={filter.day === "today"} onClick={() => setFilter({ ...filter, day: filter.day === "today" ? "" : "today" })}>
+                Aaj
+              </button>
+              <button type="button" className="tab" aria-pressed={filter.day === "week"} onClick={() => setFilter({ ...filter, day: filter.day === "week" ? "" : "week" })}>
+                7 din
+              </button>
+            </div>
           </div>
           {!demo && (
             <div className="flex flex-col gap-1.5">
@@ -473,8 +525,8 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
           <a className="btn justify-start" href={`/api/galla/${desk}/export.csv?${qs}`}>
             CSV export
           </a>
-          <button type="button" className="btn justify-start" onClick={() => setHelp(true)}>
-            Shortcuts ( ? )
+          <button type="button" className="btn justify-between" onClick={() => setHelp(true)}>
+            Shortcuts <kbd>?</kbd>
           </button>
           {!demo && <PushToggle laneId={desk} />}
           {(offline || pending.length > 0) && (
@@ -486,7 +538,7 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
         </aside>
 
         {/* list */}
-        <section aria-label="Inbox" className="min-w-0">
+        <section aria-label="Inbox" className={`min-w-0 ${items?.length === 0 ? "lg:col-span-2" : ""}`}>
           <ul className="flex flex-col gap-2" role="listbox" aria-label="Galla entries. J and K move, Enter opens.">
             {items === null &&
               Array.from({ length: 5 }, (_, i) => (
@@ -496,7 +548,20 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
                   <div className="skel mt-2 h-3 w-1/4" />
                 </li>
               ))}
-            {items?.length === 0 && <li className="rounded-md border-2 border-dashed border-[var(--line)] p-6 text-center text-[var(--muted)]">Abhi koi nahi aaya. Is filter mein kuch nahi.</li>}
+            {items?.length === 0 &&
+              (filter.status === "open" && !filter.type && !filter.q && !filter.day ? (
+                <li>
+                  <EmptyDesk demo={demo} handle={handle} />
+                </li>
+              ) : (
+                <li className="desk-empty text-center">
+                  <p className="sign text-2xl">Is filter mein kuch nahi</p>
+                  <p className="mt-1 text-[var(--muted)]">{filter.q ? `"${filter.q}" kahin nahi mila.` : "Doosra haal ya din chuno, ya sab dekho."}</p>
+                  <button type="button" className="btn mt-3" onClick={() => setFilter({ type: "", status: "open", q: "", day: "" })}>
+                    Filter hatao
+                  </button>
+                </li>
+              ))}
             {list.map((it, i) => (
               <Row
                 key={it.id}
@@ -517,7 +582,7 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
         </section>
 
         {/* detail */}
-        <section aria-label="Detail" className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+        <section ref={detailRef} aria-label="Detail" className="min-w-0 scroll-mt-4 lg:sticky lg:top-20 lg:self-start">
           {opened ? (
             <Detail
               it={opened}
@@ -534,7 +599,31 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
               }}
             />
           ) : (
-            <div className="hidden rounded-md border-2 border-dashed border-[var(--line)] p-8 text-center text-[var(--muted)] lg:block">Koi chit kholo. J, K se chalo, Enter se kholo.</div>
+            list.length > 0 && (
+              <div className="desk-empty hidden lg:block">
+                <p className="sign text-2xl">Koi chit kholo</p>
+                <p className="mt-1 text-[var(--muted)]">Mouse ki zaroorat nahi. Haath keyboard pe rakho:</p>
+                <dl className="mt-4 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2.5 text-sm">
+                  {[
+                    [["J", "K"], "neeche, upar chalo"],
+                    [["Enter"], "kholo"],
+                    [["R"], "jawab likho, Ctrl+Enter se bhejo"],
+                    [["B"], "booking ya order pakka"],
+                    [["P"], "Paisa mila"],
+                    [["A"], "archive, U se wapas"],
+                  ].map(([keys, v]) => (
+                    <div key={v as string} className="contents">
+                      <dt className="flex gap-1">
+                        {(keys as string[]).map((k) => (
+                          <kbd key={k}>{k}</kbd>
+                        ))}
+                      </dt>
+                      <dd>{v as string}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )
           )}
         </section>
       </div>
@@ -578,7 +667,7 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Shortcuts" onClick={() => setHelp(false)}>
           <div className="chit w-full max-w-md px-5 pb-5 pt-6 text-[#1e1b18]" onClick={(e) => e.stopPropagation()}>
             <p className="sign text-xl">Galla shortcuts</p>
-            <dl className="mono mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dl className="mono mt-3 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-sm">
               {[
                 ["J / K", "neeche / upar"],
                 ["Enter", "kholo"],
@@ -595,7 +684,11 @@ export function Galla({ desk, name, demo, savedViews: initialViews }: { desk: st
                 ["?", "yeh card"],
               ].map(([k, v]) => (
                 <div key={k} className="contents">
-                  <dt className="font-medium">{k}</dt>
+                  <dt className="flex flex-wrap gap-1">
+                    {k.split(/, | \/ | then /).map((x) => (
+                      <kbd key={x}>{x}</kbd>
+                    ))}
+                  </dt>
                   <dd>{v}</dd>
                 </div>
               ))}
@@ -628,9 +721,11 @@ function Row({ it, i, active, selected, shake, onClick, onPrimary, onArchive }: 
   return (
     <li
       data-row={i}
+      data-id={it.id}
       role="option"
       aria-selected={active}
-      className={`relative overflow-hidden ${shake ? "shake" : ""}`}
+      className={`row-in relative overflow-hidden ${shake ? "shake" : ""}`}
+      style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}
       onTouchStart={(e) => (start.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
       onTouchMove={(e) => {
         if (!start.current) return;
@@ -653,7 +748,7 @@ function Row({ it, i, active, selected, shake, onClick, onPrimary, onArchive }: 
       )}
       <div
         onClick={onClick}
-        className="chit relative flex cursor-pointer gap-3 px-4 pb-3 pt-4"
+        className={`chit relative flex cursor-pointer gap-3 pb-3 pt-4 ${it.type === "booking" ? "stub px-6" : "px-4"}`}
         style={{ transform: `translateX(${dx}px)`, transition: dx === 0 ? "transform 330ms var(--spring-ui)" : "none", outline: active ? "3px solid var(--lane-a)" : undefined, outlineOffset: -3, opacity: it.status === "archived" ? 0.6 : 1 }}
       >
         {selected && <span className="absolute left-1 top-2 size-2.5 rounded-full bg-[var(--rani)]" aria-label="selected" />}
@@ -666,7 +761,7 @@ function Row({ it, i, active, selected, shake, onClick, onPrimary, onArchive }: 
           <p className="mono mt-1 text-[0.7rem] text-[#4a4038]">{when(it.at)}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span className="mono rounded-sm px-1.5 text-[0.68rem] uppercase text-[#1e1b18]" style={{ background: statusTone[it.status] ?? "var(--tin)" }}>
+          <span className="rubber text-[#1e1b18]" style={{ background: `color-mix(in srgb, ${statusTone[it.status] ?? "var(--tin)"} 55%, transparent)` }}>
             {it.status}
           </span>
           <div className="flex gap-1">

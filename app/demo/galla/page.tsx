@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { demoSid } from "@/lib/demo";
 import { Galla } from "@/components/galla/Galla";
+import { EmptyDesk } from "@/components/galla/EmptyDesk";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Demo Galla", robots: { index: false } };
@@ -19,20 +20,8 @@ export default async function DemoGalla() {
           <Galla desk="demo" name="Demo" demo />
         </div>
       ) : (
-        <div className="mt-6 rounded-md border-2 border-dashed border-[var(--soot)] p-6">
-          <p className="sign text-2xl">Abhi koi nahi aaya</p>
-          <p className="mt-1">Pehle kisi demo galli pe kuch bhejo:</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <a className="cta" href="/w/meethi-rasoi/menu">
-              Meethi Rasoi se order
-            </a>
-            <a className="cta" href="/w/taal-studio/counter">
-              Taal Studio mein class
-            </a>
-            <a className="cta" href="/w/rangrez-mehendi/counter">
-              Rangrez ko chit
-            </a>
-          </div>
+        <div className="mt-6">
+          <EmptyDesk demo />
         </div>
       )}
     </main>

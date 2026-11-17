@@ -283,7 +283,7 @@ export function Counter({ handle, services, tz, laneName, replaces }: { handle: 
       </div>
 
       {/* the jar and the rail of hooks */}
-      <div className="relative rounded-md border-2 border-[#1e1b18] p-3" style={{ background: "color-mix(in srgb, var(--brick) 82%, #3b2a12)" }}>
+      <div className="hook-board relative rounded-md border-2 border-[#1e1b18] p-3">
         <div className="mb-2 flex items-center gap-3 text-[#fff4e0]">
           <div ref={jarRef} className="relative grid size-14 shrink-0 place-items-center rounded-b-xl rounded-t-md border-2 border-[#77736b] bg-[#d9d6cf]" aria-label="Steel jar with your brass token">
             {!hold && (
@@ -319,7 +319,7 @@ export function Counter({ handle, services, tz, laneName, replaces }: { handle: 
           className="no-scrollbar relative overflow-x-auto pb-2 pt-3"
           data-noswipe
         >
-          <div className="absolute left-0 right-0 top-3 h-2.5 rounded-full bg-[#5a3a1a]" style={{ minWidth: `${Math.max(1, slots?.length ?? 1) * 76}px` }} aria-hidden="true" />
+          <div className="hook-rod absolute left-0 right-0 top-3 h-3 rounded-full" style={{ minWidth: `${Math.max(1, slots?.length ?? 1) * 76}px` }} aria-hidden="true" />
           <div className="flex gap-2" style={{ minWidth: "max-content" }}>
             {slots === null &&
               Array.from({ length: 6 }, (_, i) => (
@@ -343,21 +343,23 @@ export function Counter({ handle, services, tz, laneName, replaces }: { handle: 
                   data-slot={s.start}
                   data-i={i}
                   onClick={(e) => (taken ? refuse(s) : place(s, e.currentTarget))}
-                  className={`relative flex w-[68px] shrink-0 flex-col items-center pt-3 ${shake === s.start ? "shake" : ""}`}
+                  className={`hook relative flex w-[68px] shrink-0 flex-col items-center pt-3 ${taken ? "is-taken" : ""} ${shake === s.start ? "shake" : ""}`}
                   style={{ outline: cursor === i && !hold ? "2px dashed var(--haldi)" : undefined, outlineOffset: -2 }}
                 >
                   <svg viewBox="0 0 40 52" className="h-12 w-9" aria-hidden="true">
-                    <path d="M20 0 v12 q0 8 8 8" fill="none" stroke="#cfc6b4" strokeWidth="3" />
+                    <path d="M20 0 v12 q0 8 8 8" fill="none" stroke="#1e1b18" strokeWidth="5" strokeLinecap="round" />
+                    <path d="M20 0 v12 q0 8 8 8" fill="none" stroke="#d9b45a" strokeWidth="3" strokeLinecap="round" />
                     {(taken || mine) && (
                       <g style={{ animation: mine && crack ? "shake 120ms 3" : undefined }}>
                         <circle cx="28" cy="34" r="11" fill={taken ? "#8a6a2a" : "#c9962e"} stroke="#7a5414" strokeWidth="1.5" />
                         <circle cx="28" cy="34" r="7" fill="none" stroke="#f3d27a" strokeWidth="1" />
                       </g>
                     )}
-                    {!taken && !mine && <circle cx="28" cy="34" r="11" fill="none" stroke="#f3d27a" strokeWidth="1.5" strokeDasharray="3 3" />}
+                    {!taken && !mine && <circle className="hook-ring" cx="28" cy="34" r="11" fill="none" stroke="#f3d27a" strokeWidth="1.5" strokeDasharray="3 3" />}
                   </svg>
                   <span className="mono mt-1 text-[0.72rem] text-[#fff4e0]">{fmtT(s.start, tz)}</span>
                   {cur.capacity > 1 && !taken && <span className="mono text-[0.62rem] text-[var(--haldi)]">{s.seatsLeft} seats</span>}
+                  {taken && <span className="mono text-[0.62rem] uppercase tracking-wider text-[#e9c8a0]">bhara</span>}
                 </button>
               );
             })}

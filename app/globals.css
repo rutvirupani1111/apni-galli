@@ -507,3 +507,148 @@ a {
 h1[tabindex="-1"]:focus {
   outline: none;
 }
+
+/* ---------- Galla: empty desk, rail tabs, keycaps, rows ---------- */
+.desk-empty {
+  position: relative;
+  padding: 1.5rem;
+  border: 2px solid var(--soot);
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--brick) 7%, transparent) 46px 47px),
+    color-mix(in srgb, var(--chalk) 88%, var(--marigold));
+  box-shadow: var(--shadow-paper);
+}
+.desk-bell {
+  transform-origin: 250px 100px;
+  animation: bell-nudge 3.2s var(--spring-ui) 1.2s infinite;
+}
+@keyframes bell-nudge {
+  0%, 86%, 100% { transform: rotate(0); }
+  89% { transform: rotate(-7deg); }
+  93% { transform: rotate(5deg); }
+}
+.door-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  min-height: 44px;
+  border: 2px solid var(--soot);
+  border-radius: 5px;
+  background: var(--chalk);
+  color: var(--soot);
+  text-decoration: none;
+  box-shadow: var(--shadow-paper-sm, 3px 4px 0 color-mix(in srgb, var(--brick) 25%, transparent));
+  transition: transform 180ms var(--spring-ui), box-shadow 180ms var(--spring-ui);
+  overflow: hidden;
+}
+.door-card:hover { transform: translate(-2px, -3px); box-shadow: 6px 8px 0 color-mix(in srgb, var(--brick) 30%, transparent); }
+.door-card:active { transform: scale(0.97); }
+.door-card:focus-visible { outline: 3px solid var(--lane-a, var(--rani)); outline-offset: 3px; }
+.door-art { display: block; border-right: 2px solid var(--soot); background: var(--paper); }
+.door-art svg { display: block; min-height: 100%; }
+
+.rail {
+  border: 2px solid var(--soot);
+  border-radius: 6px;
+  padding: 0.75rem;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 13px, rgba(0, 0, 0, 0.05) 13px 14px),
+    color-mix(in srgb, var(--brick) 16%, var(--chalk));
+  box-shadow: var(--shadow-paper);
+}
+.rail-h {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1.5px solid var(--soot);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--chalk);
+}
+.tab {
+  flex: 1 1 auto;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 0.6rem;
+  border: 0;
+  border-right: 1.5px solid var(--soot);
+  border-bottom: 1.5px solid var(--soot);
+  margin: 0 -1.5px -1.5px 0;
+  background: transparent;
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  cursor: pointer;
+  position: relative;
+  transition: background 150ms, color 150ms;
+}
+.tab[aria-pressed="true"] { background: var(--soot); color: var(--chalk); }
+.tab:active { transform: scale(0.97); }
+.tab:focus-visible { outline: 3px solid var(--lane-a, var(--rani)); outline-offset: -3px; z-index: 1; }
+
+kbd, .kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.7em;
+  height: 1.7em;
+  padding: 0 0.4em;
+  border: 1.5px solid var(--soot);
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  background: var(--chalk);
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+.row-in { animation: plane-land 320ms var(--spring-ui) both; }
+.stub {
+  --notch: radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px) right / 51% 100% no-repeat;
+  -webkit-mask: var(--notch);
+  mask: var(--notch);
+  clip-path: none;
+}
+.rubber {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.05rem 0.4rem;
+  border: 2px double currentColor;
+  border-radius: 4px;
+  transform: rotate(-4deg);
+  background: transparent;
+}
+::view-transition-group(chit-open) { animation-duration: 340ms; animation-timing-function: var(--spring-ui); }
+::view-transition-old(chit-open), ::view-transition-new(chit-open) { height: 100%; object-fit: cover; }
+@media (prefers-reduced-motion: reduce) {
+  .desk-bell, .row-in { animation: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 200ms !important; }
+}
+:root[data-calm="1"] .desk-bell, :root[data-calm="1"] .row-in { animation: none; }
+
+/* Chai Counter hook board: wood grain, a brass rod, hooks that lean in when free */
+.hook-board {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 22px, rgba(0, 0, 0, 0.08) 22px 23px, transparent 23px 61px, rgba(255, 220, 160, 0.05) 61px 63px),
+    linear-gradient(color-mix(in srgb, var(--brick) 86%, #3b2a12), color-mix(in srgb, var(--brick) 70%, #24170a));
+  box-shadow: var(--shadow-paper), inset 0 2px 0 rgba(255, 220, 160, 0.12);
+}
+.hook-rod {
+  background: linear-gradient(#f0cf7a, #b98a2e 55%, #6e4f17);
+  border: 1.5px solid #1e1b18;
+}
+.hook { transition: transform 180ms var(--spring-ui); }
+.hook:not(.is-taken):hover, .hook:not(.is-taken):focus-visible { transform: translateY(2px); }
+.hook-ring { transform-box: fill-box; transform-origin: center; transition: transform 200ms var(--spring-ui), stroke 150ms; }
+.hook:not(.is-taken):hover .hook-ring { transform: scale(1.18); stroke: #fff4e0; }
+.hook.is-taken { cursor: not-allowed; }
