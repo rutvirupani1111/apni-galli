@@ -106,7 +106,29 @@ async function tick() {
     }
     return rows.length;
   });
+  out.bad_hosts = await refreshBadHosts();
   return out;
+}
+
+// URLhaus (abuse.ch) publishes a free host list of live malware URLs. Refresh once a day, capped at 4 MB.
+async function refreshBadHosts() {
+  const today = new Date().toISOString().slice(0, 10);
+  const go = await withSystem((q) => claim(q, "urlhaus", today));
+  if (!go) return 0;
+  try {
+    const res = await fetch("https://urlhaus.abuse.ch/downloads/hostfile/", { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return 0;
+    const text = (await res.text()).slice(0, 4_000_000);
+    const hosts = [...new Set(text.split(/\r?\n/).filter((l) => l && !l.startsWith("#")).map((l) => l.trim().split(/\s+/).pop()!.toLowerCase()).filter((h) => h && h.includes(".") && h.length < 254))];
+    for (let i = 0; i < hosts.length; i += 2000) {
+      const part = hosts.slice(i, i + 2000);
+      await withSystem((q) => q.query("insert into bad_hosts (host) select unnest($1::text[]) on conflict (host) do update set seen_at = now()", [part]));
+    }
+    await chunked(`with x as (select host from bad_hosts where seen_at < now() - interval '3 days' limit 2000), d as (delete from bad_hosts b using x where b.host = x.host returning 1) select count(*)::int as n from d`);
+    return hosts.length;
+  } catch {
+    return 0;
+  }
 }
 
 async function handler(req: Request) {

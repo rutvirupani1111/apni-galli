@@ -451,4 +451,13 @@ grant select, insert, update, delete on push_subscriptions to galli_app;
 ${OWNED("push_subscriptions")}
 `,
   },
+  {
+    name: "0005_bad_hosts",
+    sql: `
+-- hosts from the free URLhaus feed, refreshed daily by the tick; publish refuses notes that point at them
+create table if not exists bad_hosts (host text primary key, source text not null default 'urlhaus', seen_at timestamptz not null default now());
+grant select, insert, update, delete on bad_hosts to galli_app;
+${SYSTEM_ONLY("bad_hosts")}
+`,
+  },
 ];

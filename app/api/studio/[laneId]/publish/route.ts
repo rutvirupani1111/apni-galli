@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { body, json, route } from "@/lib/http";
 import { ownLane } from "@/lib/auth";
-import { withOwner } from "@/lib/db";
+import { withOwner, withSystem } from "@/lib/db";
 import { diffSummary, type LaneDoc } from "@/lib/doc";
 import { revalidateLane, safeUrl } from "@/lib/lane";
 import { LaneDocSchema } from "@/lib/docschema";
@@ -47,6 +47,12 @@ export const POST = route(async (req: Request, { params }: { params: Promise<{ l
   const bad = await withOwner(own.owner.id, (q) => q.query<{ url: string }>("select url from notes where lane_id = $1", [laneId]));
   const badUrl = bad.find((n) => !safeUrl(n.url));
   if (badUrl) throw new HttpError(400, "bad_link", `Yeh link allowed nahi: ${badUrl.url}`);
+  // and none may point at a host on the URLhaus malware list (refreshed daily by the tick)
+  const hosts = bad.map((n) => { try { return new URL(n.url).hostname.toLowerCase(); } catch { return ""; } }).filter(Boolean);
+  if (hosts.length) {
+    const hit = await withSystem((q) => q.query<{ host: string }>("select host from bad_hosts where host = any($1::text[]) limit 1", [hosts]));
+    if (hit[0]) throw new HttpError(400, "bad_link", `Yeh link khatarnak list par hai: ${hit[0].host}`);
+  }
   const summary = diffSummary(prev ?? null, lane.draft);
   await withOwner(own.owner.id, async (q) => {
     const v = await q.query<{ id: string }>("insert into lane_versions (lane_id, owner_id, doc, diff_summary) values ($1,$2,$3,$4) returning id", [laneId, own.owner.id, JSON.stringify(lane.draft), summary]);
