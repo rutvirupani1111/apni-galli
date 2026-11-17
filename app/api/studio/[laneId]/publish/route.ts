@@ -48,7 +48,7 @@ export const POST = route(async (req: Request, { params }: { params: Promise<{ l
   const bad = await withOwner(own.owner.id, (q) => q.query<{ url: string }>("select url from notes where lane_id = $1", [laneId]));
   const badUrl = bad.find((n) => !safeUrl(n.url));
   if (badUrl) throw new HttpError(400, "bad_link", `Yeh link allowed nahi: ${badUrl.url}`);
-  // and none may point at a host on the URLhaus malware list (refreshed daily by the tick)
+  // and none may point at a known malware or phishing host (bad_hosts, refreshed daily by the tick)
   const hosts = bad.map((n) => { try { return new URL(n.url).hostname.toLowerCase(); } catch { return ""; } }).filter(Boolean);
   if (hosts.length) {
     const hit = await withSystem((q) => q.query<{ host: string }>("select host from bad_hosts where host = any($1::text[]) limit 1", [hosts]));

@@ -110,21 +110,32 @@ async function tick() {
   return out;
 }
 
-// URLhaus (abuse.ch) publishes a free host list of live malware URLs. Refresh once a day, capped at 4 MB.
+// Malware and phishing hosts for the noticeboard link check. URLhaus retired its anonymous downloads
+// (HTTP 410 since 2026), so the free OpenPhish community feed is used: one URL per line, hosts kept.
+// Refreshed once a day, capped at 4 MB, written in chunks of 2,000.
 async function refreshBadHosts() {
   const today = new Date().toISOString().slice(0, 10);
-  const go = await withSystem((q) => claim(q, "urlhaus", today));
+  const go = await withSystem((q) => claim(q, "bad_hosts", today));
   if (!go) return 0;
   try {
-    const res = await fetch("https://urlhaus.abuse.ch/downloads/hostfile/", { signal: AbortSignal.timeout(15000) });
+    const res = await fetch("https://openphish.com/feed.txt", { signal: AbortSignal.timeout(15000) });
     if (!res.ok) return 0;
     const text = (await res.text()).slice(0, 4_000_000);
-    const hosts = [...new Set(text.split(/\r?\n/).filter((l) => l && !l.startsWith("#")).map((l) => l.trim().split(/\s+/).pop()!.toLowerCase()).filter((h) => h && h.includes(".") && h.length < 254))];
+    const hostOf = (line: string) => {
+      const t = line.trim();
+      if (!t || t.startsWith("#")) return "";
+      try {
+        return new URL(t.includes("://") ? t : `http://${t.split(/\s+/).pop()}`).hostname.toLowerCase();
+      } catch {
+        return "";
+      }
+    };
+    const hosts = [...new Set(text.split(/\r?\n/).map(hostOf).filter((h) => h.includes(".") && h.length < 254))];
     for (let i = 0; i < hosts.length; i += 2000) {
       const part = hosts.slice(i, i + 2000);
-      await withSystem((q) => q.query("insert into bad_hosts (host) select unnest($1::text[]) on conflict (host) do update set seen_at = now()", [part]));
+      await withSystem((q) => q.query("insert into bad_hosts (host, source) select unnest($1::text[]), 'openphish' on conflict (host) do update set seen_at = now()", [part]));
     }
-    await chunked(`with x as (select host from bad_hosts where seen_at < now() - interval '3 days' limit 2000), d as (delete from bad_hosts b using x where b.host = x.host returning 1) select count(*)::int as n from d`);
+    await chunked(`with x as (select host from bad_hosts where seen_at < now() - interval '7 days' limit 2000), d as (delete from bad_hosts b using x where b.host = x.host returning 1) select count(*)::int as n from d`);
     return hosts.length;
   } catch {
     return 0;
